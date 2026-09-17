@@ -10,3 +10,6 @@
 [submodule "tools/XnYZip"]
 	path = tools/XnYZip
 	url = https://github.com/moonlightplague/XnYZip.git
+[submodule "tools/yaml-cpp"]
+	path = tools/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
