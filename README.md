@@ -6,6 +6,10 @@ The reference is a read-only symlink; builds and synthetic fixtures stay here.
 See [translation status](docs/translation-status.md) for verified coverage and
 compatibility differences and validation limits.
 
+## Environments
+First make sure build-essential, cmake, cargo, conan and zstd are present.
+Also we recommend to install hdf5 directly through apt, otherwise we have to build its api from source.
+
 ## Build
 
 Dependencies: CMake 3.20+, a C++20 compiler, Rust/Cargo, HDF5 with its C++ API,

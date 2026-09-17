@@ -6,5 +6,5 @@ if [[ -x "$PWD/.deps/cargo/bin/cargo" ]]; then
   export PATH="$CARGO_HOME/bin:$PATH"
 fi
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHDF5_ROOT="${HDF5_ROOT:-$HOME/.local/hdf5}" "$@"
-cmake --build build --parallel "${BUILD_JOBS:-2}"
+cmake --build build --parallel
 ctest --test-dir build --output-on-failure
