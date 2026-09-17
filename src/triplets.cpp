@@ -1,5 +1,5 @@
 #include "particle/triplets.hpp"
-#include "particle/runtime.hpp"
+
 #include <SZ3/api/lcp.hpp>
 #include <algorithm>
 #include <bit>
@@ -9,6 +9,8 @@
 #include <map>
 #include <stdexcept>
 #include <xnyzip/xnyzip.hpp>
+
+#include "particle/runtime.hpp"
 namespace particle {
 namespace {
 std::array<std::vector<float>, 3> floats(const Triplet &t) {
@@ -30,15 +32,13 @@ Triplet arrays(const std::array<std::vector<float>, 3> &v) {
   return t;
 }
 void append64(std::vector<uint8_t> &b, uint64_t v) {
-  for (int i = 0; i < 8; ++i)
-    b.push_back(static_cast<uint8_t>(v >> (i * 8)));
+  for (int i = 0; i < 8; ++i) b.push_back(static_cast<uint8_t>(v >> (i * 8)));
 }
 uint64_t take64(const std::vector<uint8_t> &b, size_t &p) {
   if (p > b.size() || b.size() - p < 8)
     throw std::runtime_error("Truncated chunk container");
   uint64_t v = 0;
-  for (int i = 0; i < 8; ++i)
-    v |= uint64_t(b[p++]) << (i * 8);
+  for (int i = 0; i < 8; ++i) v |= uint64_t(b[p++]) << (i * 8);
   return v;
 }
 XnYZip::Options xoptions(const Json &f) {
@@ -53,19 +53,17 @@ XnYZip::Options xoptions(const Json &f) {
 Triplet decode_native(const std::vector<uint8_t> &b, const Json &f,
                       bool batch = false) {
   if (f.at("codec") == "lcp") {
-    auto d = lcp::decompress<float>(b.data(), b.size(),
-                                    batch ? lcp::Mode::independent_frames
-                                          : lcp::Mode::frame);
+    auto d = lcp::decompress<float>(
+        b.data(), b.size(),
+        batch ? lcp::Mode::independent_frames : lcp::Mode::frame);
     return arrays({d.x, d.y, d.z});
   }
   auto v = XnYZip::decompress(b, xoptions(f));
-  if (v.size() % 3)
-    throw std::runtime_error("Invalid decoded triplet");
+  if (v.size() % 3) throw std::runtime_error("Invalid decoded triplet");
   std::array<std::vector<float>, 3> a;
   for (size_t k = 0; k < 3; ++k) {
     a[k].resize(v.size() / 3);
-    for (size_t i = 0; i < a[k].size(); ++i)
-      a[k][i] = v[3 * i + k];
+    for (size_t i = 0; i < a[k].size(); ++i) a[k][i] = v[3 * i + k];
   }
   return arrays(a);
 }
@@ -85,12 +83,10 @@ TripletEncoded encode_native(const Triplet &t, const std::string &codec,
     out.metadata["abs_error_bound"] = bound;
     return out;
   }
-  if (codec != "xnyzip")
-    throw std::runtime_error("Unsupported triplet codec");
+  if (codec != "xnyzip") throw std::runtime_error("Unsupported triplet codec");
   std::vector<float> xyz(checked_bytes(n, 3));
   for (size_t i = 0; i < n; ++i)
-    for (size_t k = 0; k < 3; ++k)
-      xyz[3 * i + k] = v[k][i];
+    for (size_t k = 0; k < 3; ++k) xyz[3 * i + k] = v[k][i];
   XnYZip::Options options;
   options.l2_bound = static_cast<float>(bound);
   options.direct_threshold = 0;
@@ -131,8 +127,7 @@ TripletEncoded encode_native(const Triplet &t, const std::string &codec,
     }
     double margin = std::max(.01 * requested, 2 * (maximum - requested));
     double next = options.l2_bound - margin;
-    if (!(next > 0) || !std::isfinite(next))
-      break;
+    if (!(next > 0) || !std::isfinite(next)) break;
     options.l2_bound = static_cast<float>(next);
   }
   if (!accepted)
@@ -152,12 +147,11 @@ TripletEncoded encode_native(const Triplet &t, const std::string &codec,
        {"compression_attempts", attempt + 1}});
   return out;
 }
-} // namespace
+}  // namespace
 TripletEncoded encode_triplet(const Triplet &t, const std::string &codec,
                               double bound, size_t chunk, bool hilbert_curve,
                               int workers, bool position) {
-  if (!chunk)
-    return encode_native(t, codec, bound, hilbert_curve, position);
+  if (!chunk) return encode_native(t, codec, bound, hilbert_curve, position);
   size_t n = t[0].size();
   TripletEncoded result;
   size_t chunks = n / chunk + (n % chunk != 0);
@@ -225,8 +219,7 @@ Triplet decode_triplet(const std::vector<uint8_t> &bytes, const Json &f,
       segments > count)
     throw std::runtime_error("Invalid chunk header");
   Triplet out;
-  for (auto &a : out)
-    a.type = type_of("float32");
+  for (auto &a : out) a.type = type_of("float32");
   struct Segment {
     size_t offset, length, count;
     bool batch;
@@ -263,7 +256,7 @@ Triplet decode_triplet(const std::vector<uint8_t> &bytes, const Json &f,
                           t[k].bytes.end());
   return out;
 }
-} // namespace particle
+}  // namespace particle
 namespace particle {
 TripletEncoded encode_blockwise(const Triplet &t, double bound) {
   size_t n = t[0].size();
@@ -302,8 +295,7 @@ TripletEncoded encode_blockwise(const Triplet &t, double bound) {
   size_t maximum = *std::max_element(blocks.begin(), blocks.end());
   auto type = type_of(maximum <= UINT32_MAX ? "uint32" : "uint64");
   c.block_ids = {type, std::vector<uint8_t>(checked_bytes(n, type.bytes))};
-  for (size_t i = 0; i < n; ++i)
-    c.block_ids.set(i, blocks[i]);
+  for (size_t i = 0; i < n; ++i) c.block_ids.set(i, blocks[i]);
   return c;
 }
 Triplet decode_blockwise(const std::vector<uint8_t> &bytes, const Array &packed,
@@ -327,16 +319,14 @@ Triplet decode_blockwise(const std::vector<uint8_t> &bytes, const Array &packed,
     throw std::runtime_error("Block-ID set mismatch");
   size_t bits = 0;
   for (auto count : counts) {
-    if (!count)
-      throw std::runtime_error("Empty LCP block");
+    if (!count) throw std::runtime_error("Empty LCP block");
     bits += checked_bytes(count, std::bit_width(count - 1));
   }
   if (packed.type.name != "uint32" ||
       packed.bytes.size() != checked_bytes(bits / 32 + (bits % 32 != 0), 4))
     throw std::runtime_error("Packed order size mismatch");
   std::array<std::vector<float>, 3> out;
-  for (auto &a : out)
-    a.resize(n);
+  for (auto &a : out) a.resize(n);
   size_t bit = 0, index = 0;
   for (size_t block = 0; block < counts.size(); ++block) {
     size_t count = counts[block], width = std::bit_width(count - 1);
@@ -361,4 +351,4 @@ Triplet decode_blockwise(const std::vector<uint8_t> &bytes, const Array &packed,
     throw std::runtime_error("LCP block counts do not sum to particle count");
   return arrays(out);
 }
-} // namespace particle
+}  // namespace particle

@@ -1,6 +1,7 @@
-#include "particle/layout.hpp"
 #include <algorithm>
 #include <cmath>
+
+#include "particle/layout.hpp"
 namespace particle {
 Json compress_lattice_field(const Options &o, Json &m, const std::string &name,
                             const Array &data, const Lattice &lattice,
@@ -60,4 +61,4 @@ Json compress_lattice_field(const Options &o, Json &m, const std::string &name,
   }
   return f;
 }
-} // namespace particle
+}  // namespace particle

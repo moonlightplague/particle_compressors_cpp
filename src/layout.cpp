@@ -1,4 +1,5 @@
 #include "particle/layout.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -31,16 +32,14 @@ uint32_t morton(const std::array<size_t, 3> &c) {
   for (int k = 0; k < 3; ++k) {
     if (c[k] >= 1024)
       throw std::runtime_error("Morton coordinate exceeds 10 bits");
-    for (int b = 0; b < 10; ++b)
-      m |= ((c[k] >> b) & 1) << (3 * b + k);
+    for (int b = 0; b < 10; ++b) m |= ((c[k] >> b) & 1) << (3 * b + k);
   }
   return m;
 }
 std::array<size_t, 3> unmorton(uint32_t m) {
   std::array<size_t, 3> c{};
   for (int k = 0; k < 3; ++k)
-    for (int b = 0; b < 10; ++b)
-      c[k] |= ((m >> (3 * b + k)) & 1) << b;
+    for (int b = 0; b < 10; ++b) c[k] |= ((m >> (3 * b + k)) & 1) << b;
   return c;
 }
 uint32_t hilbert(uint32_t v, int bits, bool inverse) {
@@ -90,7 +89,7 @@ void validate_structured(const Json &j) {
       axes != std::array<size_t, 3>{0, 1, 2})
     throw std::runtime_error("Inconsistent structured geometry");
 }
-} // namespace
+}  // namespace
 size_t Lattice::dense_count() const {
   return checked_bytes(checked_bytes(shape[0], shape[1]), shape[2]);
 }
@@ -163,8 +162,7 @@ Lattice infer_lattice(const Array &ids, const Triplet &pos, size_t side,
     l.coordinates.push_back(coordinates(ids.number(i), side, l.base));
   for (size_t k = 0; k < 3; ++k) {
     std::set<size_t> present;
-    for (auto &c : l.coordinates)
-      present.insert(c[k]);
+    for (auto &c : l.coordinates) present.insert(c[k]);
     if (present.size() == side) {
       l.starts[k] = 0;
       l.shape[k] = side;
@@ -181,13 +179,11 @@ Lattice infer_lattice(const Array &ids, const Triplet &pos, size_t side,
       }
     }
     size_t span = 1;
-    for (auto x : v)
-      span = std::max(span, (x + side - start) % side + 1);
+    for (auto x : v) span = std::max(span, (x + side - start) % side + 1);
     l.starts[k] = start;
     l.shape[k] = span;
   }
-  for (auto &c : l.coordinates)
-    l.indices.push_back(index_of(c, l));
+  for (auto &c : l.coordinates) l.indices.push_back(index_of(c, l));
   if (!structured) {
     if (l.dense_count() < 10000)
       throw std::runtime_error("Dense box has fewer than 10000 values");
@@ -260,10 +256,8 @@ Array lattice_encode(const Array &a, const Lattice &l, size_t axis,
                 dense.type.bytes);
   size_t next = 0;
   for (size_t index = 0; index < dense.size(); ++index) {
-    while (next < order.size() && l.indices[order[next]] < index)
-      ++next;
-    if (next < order.size() && l.indices[order[next]] == index)
-      continue;
+    while (next < order.size() && l.indices[order[next]] < index) ++next;
+    if (next < order.size() && l.indices[order[next]] == index) continue;
     double value;
     if (!next)
       value = transformed.number(order[0]);
@@ -284,8 +278,7 @@ Array lattice_decode(const Array &dense, const Lattice &l, size_t axis,
   if (dense.size() != l.dense_count())
     throw std::runtime_error("Dense decoded count mismatch");
   Array a = dense.gather(l.indices);
-  if (transform == "identity")
-    return a;
+  if (transform == "identity") return a;
   if (transform != residual_name)
     throw std::runtime_error("Unknown lattice transform");
   if (wraps && wraps->size() != a.size())
@@ -370,4 +363,4 @@ std::vector<size_t> hybrid_order(const Array &ids, const Triplet &pos,
                    [&](size_t a, size_t b) { return keys[a] < keys[b]; });
   return order;
 }
-} // namespace particle
+}  // namespace particle

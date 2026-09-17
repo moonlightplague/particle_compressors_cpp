@@ -1,22 +1,47 @@
-# Discover system installations or a pre-existing Conan package cache.
-file(GLOB PARTICLE_CONAN_PACKAGES "$ENV{HOME}/.conan2/p/*/p" "$ENV{HOME}/.conan2/p/b/*/p")
-find_path(PARTICLE_FMT_INCLUDE fmt/format.h HINTS ${PARTICLE_CONAN_PACKAGES} PATH_SUFFIXES include REQUIRED)
-find_library(PARTICLE_FMT_LIBRARY fmt HINTS ${PARTICLE_CONAN_PACKAGES} PATH_SUFFIXES lib REQUIRED)
-find_path(PARTICLE_EIGEN_INCLUDE Eigen/Core HINTS ${PARTICLE_CONAN_PACKAGES} PATH_SUFFIXES include/eigen3 REQUIRED)
+# Reuse the Conan package paths discovered in the top-level CMakeLists.txt.
+find_path(
+  PARTICLE_FMT_INCLUDE fmt/format.h
+  HINTS ${PARTICLE_CONAN_PACKAGES}
+  PATH_SUFFIXES include REQUIRED)
+find_library(
+  PARTICLE_FMT_LIBRARY fmt
+  HINTS ${PARTICLE_CONAN_PACKAGES}
+  PATH_SUFFIXES lib REQUIRED)
+find_path(
+  PARTICLE_EIGEN_INCLUDE Eigen/Core
+  HINTS ${PARTICLE_CONAN_PACKAGES}
+  PATH_SUFFIXES include/eigen3 REQUIRED)
 find_package(TBB REQUIRED)
-file(GLOB_RECURSE XNY_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tools/XnYZip/source/*.cpp")
+file(GLOB_RECURSE XNY_SOURCES CONFIGURE_DEPENDS
+     "${CMAKE_SOURCE_DIR}/tools/XnYZip/source/*.cpp")
 list(FILTER XNY_SOURCES EXCLUDE REGEX "/(main|mpi_driver|mr_decompress)\\.cpp$")
 add_library(particle_xnyzip STATIC ${XNY_SOURCES})
-target_include_directories(particle_xnyzip PUBLIC tools/XnYZip/include PRIVATE tools/XnYZip/source ${PARTICLE_FMT_INCLUDE} ${PARTICLE_EIGEN_INCLUDE})
-target_link_libraries(particle_xnyzip PRIVATE ${PARTICLE_FMT_LIBRARY} ${ZSTD_LIBRARY} TBB::tbb OpenMP::OpenMP_CXX)
+target_include_directories(
+  particle_xnyzip
+  PUBLIC tools/XnYZip/include
+  PRIVATE tools/XnYZip/source ${PARTICLE_FMT_INCLUDE} ${PARTICLE_EIGEN_INCLUDE})
+target_link_libraries(
+  particle_xnyzip PRIVATE ${PARTICLE_FMT_LIBRARY} particle_zstd TBB::tbb
+                          OpenMP::OpenMP_CXX)
 # Correct upstream allocator pairing without changing the checkout or algorithm.
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-  "${CMAKE_SOURCE_DIR}/tools/LCP/include/SZ3/utils/RadixSort.hpp")
-file(READ "${CMAKE_SOURCE_DIR}/tools/LCP/include/SZ3/utils/RadixSort.hpp" LCP_RADIX_HEADER)
-string(REPLACE "    free(buffer);" "    delete[] buffer;" LCP_RADIX_HEADER "${LCP_RADIX_HEADER}")
-file(CONFIGURE OUTPUT "${CMAKE_BINARY_DIR}/lcp_compat/SZ3/utils/RadixSort.hpp" CONTENT "${LCP_RADIX_HEADER}" @ONLY)
+set_property(
+  DIRECTORY
+  APPEND
+  PROPERTY CMAKE_CONFIGURE_DEPENDS
+           "${CMAKE_SOURCE_DIR}/tools/LCP/include/SZ3/utils/RadixSort.hpp")
+file(READ "${CMAKE_SOURCE_DIR}/tools/LCP/include/SZ3/utils/RadixSort.hpp"
+     LCP_RADIX_HEADER)
+string(REPLACE "    free(buffer);" "    delete[] buffer;" LCP_RADIX_HEADER
+               "${LCP_RADIX_HEADER}")
+file(CONFIGURE OUTPUT "${CMAKE_BINARY_DIR}/lcp_compat/SZ3/utils/RadixSort.hpp"
+     CONTENT "${LCP_RADIX_HEADER}" @ONLY)
 add_library(particle_triplets STATIC src/triplets.cpp)
-target_include_directories(particle_triplets BEFORE PRIVATE "${CMAKE_BINARY_DIR}/lcp_compat")
-target_include_directories(particle_triplets PUBLIC include ${HDF5_INCLUDE_DIRS} PRIVATE tools/LCP/include)
-target_link_libraries(particle_triplets PRIVATE particle_xnyzip ${ZSTD_LIBRARY} OpenMP::OpenMP_CXX)
+target_include_directories(particle_triplets BEFORE
+                           PRIVATE "${CMAKE_BINARY_DIR}/lcp_compat")
+target_include_directories(
+  particle_triplets
+  PUBLIC include ${HDF5_INCLUDE_DIRS}
+  PRIVATE tools/LCP/include)
+target_link_libraries(particle_triplets PRIVATE particle_xnyzip particle_zstd
+                                                OpenMP::OpenMP_CXX)
 target_link_libraries(particle_pipeline PRIVATE particle_triplets)

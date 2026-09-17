@@ -1,10 +1,11 @@
-#include "particle/pipeline.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
 #include <numeric>
 #include <stdexcept>
+
+#include "particle/pipeline.hpp"
 namespace particle {
 namespace {
 Json metric(const Array &original, const Array &restored, double scale) {
@@ -22,24 +23,24 @@ Json metric(const Array &original, const Array &restored, double scale) {
   }
   double mse = squared / n, rmse = std::sqrt(mse), range = hi - lo;
   double inf = std::numeric_limits<double>::infinity();
-  return {{"count", n},
-          {"min", lo},
-          {"max", hi},
-          {"range", range},
-          {"max_absolute_error", maximum},
-          {"mean_absolute_error", sum / n},
-          {"mse", mse},
-          {"mmse", mse},
-          {"rmse", rmse},
-          {"nrmse", range  ? rmse / range
-                    : rmse ? inf
-                           : 0},
-          {"psnr", mse == 0 ? inf
-                   : range == 0
-                       ? -inf
-                       : 20 * std::log10(range) - 10 * std::log10(mse)}};
+  return {
+      {"count", n},
+      {"min", lo},
+      {"max", hi},
+      {"range", range},
+      {"max_absolute_error", maximum},
+      {"mean_absolute_error", sum / n},
+      {"mse", mse},
+      {"mmse", mse},
+      {"rmse", rmse},
+      {"nrmse", range  ? rmse / range
+                : rmse ? inf
+                       : 0},
+      {"psnr", mse == 0     ? inf
+               : range == 0 ? -inf
+                            : 20 * std::log10(range) - 10 * std::log10(mse)}};
 }
-} // namespace
+}  // namespace
 Json compute_metrics(const Options &, const Json &m) {
   auto started = std::chrono::steady_clock::now();
   size_t count = m.at("count");
@@ -100,8 +101,7 @@ Json compute_metrics(const Options &, const Json &m) {
     }
     alignment = "particle_id";
   }
-  for (auto &a : source.data)
-    a = a.gather(order);
+  for (auto &a : source.data) a = a.gather(order);
   Json report;
   for (auto key : {"compressed_fields", "compressors", "particle_sort",
                    "runtime", "sizes", "timing"})
@@ -170,17 +170,14 @@ Json compute_metrics(const Options &, const Json &m) {
          observed <= effective + 1e-12 + 1e-6 * std::max(1., effective)}};
     if (i) {
       target["preprocess_cast_allowance"] = cast;
-      if (pos)
-        target["recombine_rounding_allowance"] = rounding;
+      if (pos) target["recombine_rounding_allowance"] = rounding;
     }
-    if (codec == "xnyzip")
-      target["norm"] = "l2";
+    if (codec == "xnyzip") target["norm"] = "l2";
     report["error_bound_consistency"][name] = target;
   }
   for (bool pos : {true, false}) {
     std::string group = pos ? "positions" : "velocities";
-    if (m["compressors"][group] != "xnyzip")
-      continue;
+    if (m["compressors"][group] != "xnyzip") continue;
     double max = 0, sum = 0, squared = 0;
     for (size_t row = 0; row < count; ++row) {
       double e2 = 0;
@@ -224,4 +221,4 @@ Json compute_metrics(const Options &, const Json &m) {
           .count();
   return report;
 }
-} // namespace particle
+}  // namespace particle

@@ -1,7 +1,8 @@
-#include "particle/pipeline.hpp"
 #include <bit>
 #include <fstream>
 #include <stdexcept>
+
+#include "particle/pipeline.hpp"
 namespace particle {
 Snapshot read_native(const fs::path &path, int64_t limit) {
   if (std::endian::native != std::endian::little)
@@ -16,8 +17,7 @@ Snapshot read_native(const fs::path &path, int64_t limit) {
                              config.string());
   std::vector<std::string> tokens;
   std::string token;
-  while (f >> token)
-    tokens.push_back(token);
+  while (f >> token) tokens.push_back(token);
   if (tokens.size() != 43)
     throw std::runtime_error("Native configuration must contain 43 values");
   std::array<int64_t, 43> values{};
@@ -86,4 +86,4 @@ Snapshot read_native(const fs::path &path, int64_t limit) {
   s.metadata["source"] = source;
   return s;
 }
-} // namespace particle
+}  // namespace particle

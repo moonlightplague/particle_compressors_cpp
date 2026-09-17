@@ -17,4 +17,4 @@ Triplet decode_blockwise(const std::vector<uint8_t> &bytes, const Array &packed,
                          const Array &block_ids);
 Triplet decode_triplet(const std::vector<uint8_t> &bytes, const Json &metadata,
                        int workers = 0);
-} // namespace particle
+}  // namespace particle

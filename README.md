@@ -12,6 +12,12 @@ Dependencies: CMake 3.20+, a C++20 compiler, Rust/Cargo, HDF5 with its C++ API,
 Zstandard, OpenMP, fmt, Eigen3, and TBB. Initialize the five repository
 submodules before building. yaml-cpp is built from its submodule.
 
+Zstandard requires development headers and a linker library, not just the runtime
+package or CLI. On Debian/Ubuntu, install them with `sudo apt-get install libzstd-dev`.
+System installations and existing Conan cache packages are discovered automatically;
+for another installation, pass `-DZSTD_INCLUDE_DIR=/path/to/include` and
+`-DZSTD_LIBRARY=/path/to/lib/libzstd.so` to `build.sh` (a static library also works).
+
 ```sh
 git submodule update --init --recursive
 bash build_hdf5.sh  # if $HOME/.local/hdf5 is not already installed

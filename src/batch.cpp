@@ -1,4 +1,6 @@
-#include "particle/pipeline.hpp"
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -8,9 +10,9 @@
 #include <numeric>
 #include <set>
 #include <sstream>
-#include <sys/wait.h>
 #include <thread>
-#include <unistd.h>
+
+#include "particle/pipeline.hpp"
 namespace particle {
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -37,8 +39,7 @@ std::vector<std::pair<int, std::string>> natural(const fs::path &p) {
 std::vector<fs::path> discover(const fs::path &directory) {
   std::vector<fs::path> paths;
   for (const auto &e : fs::directory_iterator(directory)) {
-    if (!e.is_regular_file())
-      continue;
+    if (!e.is_regular_file()) continue;
     auto name = e.path().filename().string();
     if (e.path().extension() == ".h5" ||
         (name.starts_with("dat_") && e.path().extension() != ".h5"))
@@ -52,8 +53,7 @@ std::vector<fs::path> discover(const fs::path &directory) {
       for (int i = 0; i <= 9; ++i) {
         if (!(f >> token))
           throw std::runtime_error("Invalid native configuration");
-        if (i == 9)
-          n = std::stoll(token);
+        if (i == 9) n = std::stoll(token);
       }
       if (n)
         throw std::runtime_error(
@@ -71,8 +71,7 @@ std::vector<fs::path> discover(const fs::path &directory) {
   return paths;
 }
 Json stable_attrs(Json a) {
-  for (auto key : {"npart", "npart_total", "proc_size", "rank"})
-    a.erase(key);
+  for (auto key : {"npart", "npart_total", "proc_size", "rank"}) a.erase(key);
   return a;
 }
 int merge(const Options &o, const std::vector<fs::path> &files) {
@@ -84,12 +83,10 @@ int merge(const Options &o, const std::vector<fs::path> &files) {
   Json native = Json::array();
   for (const auto &path : files) {
     auto s = read_hdf5(path);
-    if (!s.count())
-      throw std::runtime_error("Cannot merge an empty snapshot");
+    if (!s.count()) throw std::runtime_error("Cannot merge an empty snapshot");
     counts[path.filename().string()] = s.count();
     bytes += fs::file_size(path);
-    if (s.metadata.contains("source"))
-      native.push_back(s.metadata["source"]);
+    if (s.metadata.contains("source")) native.push_back(s.metadata["source"]);
     if (first) {
       joined = std::move(s);
       first = false;
@@ -116,8 +113,7 @@ int merge(const Options &o, const std::vector<fs::path> &files) {
   size_t n = joined.count();
   for (auto key : {"npart", "npart_total", "proc_size", "rank"}) {
     auto &attrs = joined.metadata["root_attrs"];
-    if (!attrs.contains(key))
-      continue;
+    if (!attrs.contains(key)) continue;
     auto &a = attrs[key];
     if (!a["shape"].empty())
       throw std::runtime_error("Mutable merge attributes must be scalar");
@@ -164,8 +160,7 @@ int merge(const Options &o, const std::vector<fs::path> &files) {
       {"id_overlap_check",
        {{"status", "passed"}, {"algorithm", "in_memory_sort"}, {"count", n}}},
       {"wall_seconds", seconds(started)}};
-  for (auto &p : files)
-    metadata["input_files"].push_back(p.string());
+  for (auto &p : files) metadata["input_files"].push_back(p.string());
   if (!native.empty()) {
     metadata["native_sources"] = native;
     metadata["source_file_bytes_total"] = bytes;
@@ -174,11 +169,10 @@ int merge(const Options &o, const std::vector<fs::path> &files) {
   next.merge_metadata = metadata;
   return run(next);
 }
-} // namespace
+}  // namespace
 int run_directory(const Options &o) {
   auto paths = discover(o.input);
-  if (o.merge)
-    return merge(o, paths);
+  if (o.merge) return merge(o, paths);
   fs::create_directories(o.work_dir);
   size_t workers = std::min<size_t>(
       paths.size(),
@@ -201,8 +195,7 @@ int run_directory(const Options &o) {
     std::cout.flush();
     std::cerr.flush();
     pid_t pid = fork();
-    if (pid < 0)
-      throw std::runtime_error("Cannot fork file worker");
+    if (pid < 0) throw std::runtime_error("Cannot fork file worker");
     if (pid == 0) {
       auto t = Clock::now();
       int code = 0;
@@ -236,17 +229,14 @@ int run_directory(const Options &o) {
     active[pid] = index;
   };
   while (next < paths.size() || !active.empty()) {
-    while (next < paths.size() && active.size() < workers)
-      launch(next++);
+    while (next < paths.size() && active.size() < workers) launch(next++);
     int status = 0;
     pid_t pid = waitpid(-1, &status, 0);
     if (pid < 0) {
-      if (errno == EINTR)
-        continue;
+      if (errno == EINTR) continue;
       throw std::runtime_error("Cannot wait for file worker");
     }
-    if (!active.contains(pid))
-      continue;
+    if (!active.contains(pid)) continue;
     size_t index = active.at(pid);
     active.erase(pid);
     auto path =
@@ -310,8 +300,7 @@ int run_directory(const Options &o) {
                           ? "lcp_units"
                           : "source_units"}};
       }
-      if (!quality.empty())
-        entry["quality_metrics"] = quality;
+      if (!quality.empty()) entry["quality_metrics"] = quality;
     }
     entries.push_back(entry);
     if (!r.value("succeeded", false)) {
@@ -355,16 +344,13 @@ int run_directory(const Options &o) {
       for (auto prefix : {"compressed/positions.lcp",
                           "compressed/positions.xnyzip", "compressed/order.",
                           "compressed/x.", "compressed/y.", "compressed/z."})
-        if (path.starts_with(prefix))
-          group = "positions";
+        if (path.starts_with(prefix)) group = "positions";
       for (auto prefix :
            {"compressed/velocities.lcp", "compressed/velocities.xnyzip",
             "compressed/velocity_order.", "compressed/velocity_block_ids.",
             "compressed/vx.", "compressed/vy.", "compressed/vz."})
-        if (path.starts_with(prefix))
-          group = "velocities";
-      if (path.starts_with("compressed/id."))
-        group = "id";
+        if (path.starts_with(prefix)) group = "velocities";
+      if (path.starts_with("compressed/id.")) group = "id";
       if (!group.empty())
         groups[group]["compressed_bytes_total"] =
             groups[group]["compressed_bytes_total"].get<size_t>() +
@@ -382,8 +368,7 @@ int run_directory(const Options &o) {
                {"compression_ratio", nullptr}};
   }
   auto statistics = [](std::vector<double> values) -> Json {
-    if (values.empty())
-      return Json::object();
+    if (values.empty()) return Json::object();
     std::sort(values.begin(), values.end());
     size_t n = values.size();
     return {{"min", values.front()},
@@ -427,4 +412,4 @@ int run_directory(const Options &o) {
             << (fs::path(o.work_dir) / "batch_metrics.json").string() << '\n';
   return 0;
 }
-} // namespace particle
+}  // namespace particle

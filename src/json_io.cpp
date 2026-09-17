@@ -1,10 +1,11 @@
-#include "particle/pipeline.hpp"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+
+#include "particle/pipeline.hpp"
 namespace particle {
 namespace {
 // Python's reports use JSON's commonly implemented NaN/Infinity extension.
@@ -16,8 +17,7 @@ void render(std::ostream &out, const Json &j, size_t depth) {
   } else if (j.is_object()) {
     out << '{';
     std::vector<std::string> keys;
-    for (auto it = j.begin(); it != j.end(); ++it)
-      keys.push_back(it.key());
+    for (auto it = j.begin(); it != j.end(); ++it) keys.push_back(it.key());
     std::sort(keys.begin(), keys.end());
     for (size_t i = 0; i < keys.size(); ++i) {
       out << (i ? ",\n" : "\n");
@@ -55,13 +55,11 @@ class Reader {
   }
   char peek() {
     space();
-    if (pos == text.size())
-      throw std::runtime_error("Truncated JSON");
+    if (pos == text.size()) throw std::runtime_error("Truncated JSON");
     return text[pos];
   }
   void expect(char c) {
-    if (peek() != c)
-      throw std::runtime_error("Malformed JSON");
+    if (peek() != c) throw std::runtime_error("Malformed JSON");
     ++pos;
   }
   Json string() {
@@ -80,11 +78,9 @@ class Reader {
     throw std::runtime_error("Unterminated JSON string");
   }
   Json value(size_t depth) {
-    if (depth > 512)
-      throw std::runtime_error("JSON nesting exceeds 512");
+    if (depth > 512) throw std::runtime_error("JSON nesting exceeds 512");
     char c = peek();
-    if (c == '"')
-      return string();
+    if (c == '"') return string();
     if (c == '{' || c == '[') {
       ++pos;
       Json j = c == '{' ? Json::object() : Json::array();
@@ -116,26 +112,22 @@ class Reader {
            !std::isspace(static_cast<unsigned char>(text[pos])))
       ++pos;
     auto token = text.substr(begin, pos - begin);
-    if (token == "Infinity")
-      return std::numeric_limits<double>::infinity();
-    if (token == "-Infinity")
-      return -std::numeric_limits<double>::infinity();
-    if (token == "NaN")
-      return std::numeric_limits<double>::quiet_NaN();
+    if (token == "Infinity") return std::numeric_limits<double>::infinity();
+    if (token == "-Infinity") return -std::numeric_limits<double>::infinity();
+    if (token == "NaN") return std::numeric_limits<double>::quiet_NaN();
     return Json::parse(token);
   }
 
-public:
+ public:
   explicit Reader(const std::string &s) : text(s) {}
   Json read() {
     Json result = value(0);
     space();
-    if (pos != text.size())
-      throw std::runtime_error("Trailing JSON data");
+    if (pos != text.size()) throw std::runtime_error("Trailing JSON data");
     return result;
   }
 };
-} // namespace
+}  // namespace
 std::string json_text(const Json &j) {
   std::ostringstream out;
   render(out, j, 0);
@@ -144,8 +136,7 @@ std::string json_text(const Json &j) {
 }
 Json read_json(const fs::path &p) {
   std::ifstream f(p);
-  if (!f)
-    throw std::runtime_error("Cannot read JSON: " + p.string());
+  if (!f) throw std::runtime_error("Cannot read JSON: " + p.string());
   std::string text((std::istreambuf_iterator<char>(f)), {});
   return Reader(text).read();
 }
@@ -153,7 +144,6 @@ void write_json(const fs::path &p, const Json &j) {
   fs::create_directories(p.parent_path());
   std::ofstream f(p);
   f << json_text(j);
-  if (!f)
-    throw std::runtime_error("Cannot write " + p.string());
+  if (!f) throw std::runtime_error("Cannot write " + p.string());
 }
-} // namespace particle
+}  // namespace particle

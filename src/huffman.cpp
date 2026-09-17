@@ -1,4 +1,5 @@
 #include "particle/huffman.hpp"
+
 #include <algorithm>
 #include <map>
 #include <queue>
@@ -7,23 +8,20 @@
 namespace particle {
 namespace {
 void put(std::vector<uint8_t> &out, uint64_t value, size_t n) {
-  for (size_t i = 0; i < n; ++i)
-    out.push_back(value >> (8 * i));
+  for (size_t i = 0; i < n; ++i) out.push_back(value >> (8 * i));
 }
 uint64_t get(const std::vector<uint8_t> &in, size_t &p, size_t n) {
   if (p > in.size() || n > in.size() - p)
     throw std::runtime_error("Truncated Huffman stream");
   uint64_t v = 0;
-  for (size_t i = 0; i < n; ++i)
-    v |= uint64_t(in[p++]) << (i * 8);
+  for (size_t i = 0; i < n; ++i) v |= uint64_t(in[p++]) << (i * 8);
   return v;
 }
-std::map<uint64_t, std::string>
-canonical(const std::map<uint64_t, size_t> &lengths) {
+std::map<uint64_t, std::string> canonical(
+    const std::map<uint64_t, size_t> &lengths) {
   std::vector<std::pair<size_t, uint64_t>> order;
   for (auto [v, n] : lengths) {
-    if (!n || n > 255)
-      throw std::runtime_error("Invalid Huffman length");
+    if (!n || n > 255) throw std::runtime_error("Invalid Huffman length");
     order.emplace_back(n, v);
   }
   std::sort(order.begin(), order.end());
@@ -36,8 +34,7 @@ canonical(const std::map<uint64_t, size_t> &lengths) {
     bits.resize(n, '0');
     codes[v] = bits;
     size_t i = bits.size();
-    while (i && bits[i - 1] == '1')
-      bits[--i] = '0';
+    while (i && bits[i - 1] == '1') bits[--i] = '0';
     if (i)
       bits[i - 1] = '1';
     else
@@ -45,7 +42,7 @@ canonical(const std::map<uint64_t, size_t> &lengths) {
   }
   return codes;
 }
-} // namespace
+}  // namespace
 std::vector<uint8_t> huffman_encode(const Array &a, Json &meta) {
   if (a.type.name != "uint32" && a.type.name != "uint64")
     throw std::runtime_error("Huffman requires uint32/uint64");
@@ -84,8 +81,7 @@ std::vector<uint8_t> huffman_encode(const Array &a, Json &meta) {
   }
   std::map<uint64_t, size_t> lengths;
   std::vector<std::pair<size_t, size_t>> stack;
-  if (!heap.empty())
-    stack.emplace_back(std::get<2>(heap.top()), 0);
+  if (!heap.empty()) stack.emplace_back(std::get<2>(heap.top()), 0);
   while (!stack.empty()) {
     auto [index, depth] = stack.back();
     stack.pop_back();
@@ -99,8 +95,7 @@ std::vector<uint8_t> huffman_encode(const Array &a, Json &meta) {
   }
   auto codes = canonical(lengths);
   size_t bits = 0;
-  for (auto [v, n] : frequencies)
-    bits += checked_bytes(n, lengths[v]);
+  for (auto [v, n] : frequencies) bits += checked_bytes(n, lengths[v]);
   std::vector<uint8_t> out{'L', 'C', 'P', 'H', 'U', 'F', '3', 0};
   put(out, a.size(), 8);
   put(out, bits, 8);
@@ -130,8 +125,7 @@ std::vector<uint8_t> huffman_encode(const Array &a, Json &meta) {
   return out;
 }
 Array huffman_decode(const std::vector<uint8_t> &b, size_t count) {
-  if (b.size() < 8)
-    throw std::runtime_error("Truncated Huffman header");
+  if (b.size() < 8) throw std::runtime_error("Truncated Huffman header");
   std::string magic(b.begin(), b.begin() + 8);
   bool v3 = magic == std::string("LCPHUF3\0", 8);
   if (!v3 && magic != std::string("LCPHUF2\0", 8))
@@ -165,8 +159,7 @@ Array huffman_decode(const std::vector<uint8_t> &b, size_t count) {
     size_t node = 0;
     for (char ch : code) {
       int bit = ch - '0';
-      if (trie[node].leaf)
-        throw std::runtime_error("Invalid Huffman prefix");
+      if (trie[node].leaf) throw std::runtime_error("Invalid Huffman prefix");
       if (trie[node].next[bit] < 0) {
         trie[node].next[bit] = trie.size();
         trie.emplace_back();
@@ -183,12 +176,10 @@ Array huffman_decode(const std::vector<uint8_t> &b, size_t count) {
   for (size_t i = 0; i < bits; ++i) {
     int bit = (b[p + i / 8] >> (7 - i % 8)) & 1;
     int next = trie[node].next[bit];
-    if (next < 0)
-      throw std::runtime_error("Invalid Huffman code");
+    if (next < 0) throw std::runtime_error("Invalid Huffman code");
     node = next;
     if (trie[node].leaf) {
-      if (written >= count)
-        throw std::runtime_error("Excess Huffman values");
+      if (written >= count) throw std::runtime_error("Excess Huffman values");
       previous = (previous + trie[node].value) & mask;
       out.set(written++, previous);
       node = 0;
@@ -198,4 +189,4 @@ Array huffman_decode(const std::vector<uint8_t> &b, size_t count) {
     throw std::runtime_error("Incomplete Huffman data");
   return out;
 }
-} // namespace particle
+}  // namespace particle

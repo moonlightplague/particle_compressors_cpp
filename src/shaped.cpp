@@ -1,12 +1,12 @@
-#include "particle/layout.hpp"
 #include <algorithm>
 #include <cstring>
 #include <stdexcept>
+
+#include "particle/layout.hpp"
 namespace particle {
 namespace {
 size_t product(const std::array<size_t, 3> &s) {
-  if (!s[0] || !s[1] || !s[2])
-    throw std::runtime_error("Invalid dense shape");
+  if (!s[0] || !s[1] || !s[2]) throw std::runtime_error("Invalid dense shape");
   return checked_bytes(checked_bytes(s[0], s[1]), s[2]);
 }
 std::vector<size_t> transpose_order(const std::array<size_t, 3> &shape,
@@ -29,7 +29,7 @@ std::vector<size_t> transpose_order(const std::array<size_t, 3> &shape,
   }
   return order;
 }
-} // namespace
+}  // namespace
 std::vector<uint8_t> encode_shaped(const Array &a, const std::string &codec,
                                    double bound,
                                    const std::array<size_t, 3> &shape,
@@ -52,8 +52,7 @@ std::vector<uint8_t> encode_shaped(const Array &a, const std::string &codec,
   };
   do {
     trial(permutation, {});
-    if (!search)
-      break;
+    if (!search) break;
   } while (std::next_permutation(permutation.begin(), permutation.end()));
   if (search) {
     auto p = selected;
@@ -83,8 +82,7 @@ Array decode_shaped(const std::vector<uint8_t> &bytes, const Json &f) {
       throw std::runtime_error("Encoded dimensions disagree with permutation");
   auto a = decode(bytes, type_of(f.at("dtype")), n, n, f.at("codec"));
   std::vector<size_t> inverse(n);
-  for (size_t i = 0; i < n; ++i)
-    inverse[order[i]] = i;
+  for (size_t i = 0; i < n; ++i) inverse[order[i]] = i;
   return a.gather(inverse);
 }
-} // namespace particle
+}  // namespace particle

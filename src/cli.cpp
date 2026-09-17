@@ -1,18 +1,19 @@
-#include "CLI11.hpp"
-#include "particle/pipeline.hpp"
+#include <yaml-cpp/yaml.h>
+
 #include <cmath>
 #include <cstdlib>
 #include <set>
 #include <stdexcept>
-#include <yaml-cpp/yaml.h>
+
+#include "CLI11.hpp"
+#include "particle/pipeline.hpp"
 namespace particle {
 namespace {
 std::string absolute_path(std::string path,
                           const fs::path &base = fs::current_path()) {
   if (path.starts_with("~/")) {
     const char *home = std::getenv("HOME");
-    if (home)
-      path = std::string(home) + path.substr(1);
+    if (home) path = std::string(home) + path.substr(1);
   }
   fs::path p(path);
   return fs::absolute(p.is_absolute() ? p : base / p)
@@ -24,17 +25,14 @@ void load_config(Options &o) {
   if (!fs::is_regular_file(path))
     throw std::runtime_error("Config file does not exist: " + o.config);
   auto root = YAML::LoadFile(o.config);
-  if (root.IsNull())
-    return;
-  if (!root.IsMap())
-    throw std::runtime_error("Config must contain a mapping");
+  if (root.IsNull()) return;
+  if (!root.IsMap()) throw std::runtime_error("Config must contain a mapping");
   for (auto it : root)
     if (it.first.as<std::string>() != "advanced")
       throw std::runtime_error("Unknown config section: " +
                                it.first.as<std::string>());
   auto a = root["advanced"];
-  if (!a)
-    return;
+  if (!a) return;
   if (!a.IsMap())
     throw std::runtime_error("Config section advanced must be a mapping");
   const std::set<std::string> keys{"lcp",
@@ -63,9 +61,9 @@ void load_config(Options &o) {
     if (!keys.contains(it.first.as<std::string>()))
       throw std::runtime_error("Unknown advanced config key: " +
                                it.first.as<std::string>());
-#define OPTIONAL(K)                                                            \
-  if (a[#K])                                                                   \
-  o.K = a[#K].IsNull() ? std::nullopt                                          \
+#define OPTIONAL(K)                   \
+  if (a[#K])                          \
+  o.K = a[#K].IsNull() ? std::nullopt \
                        : std::optional<double>(a[#K].as<double>())
   OPTIONAL(abs_eb);
   OPTIONAL(rel_eb);
@@ -75,9 +73,8 @@ void load_config(Options &o) {
   OPTIONAL(vel_rel_eb);
   OPTIONAL(position_scale_value);
 #undef OPTIONAL
-#define VALUE(K, T)                                                            \
-  if (a[#K])                                                                   \
-  o.K = a[#K].as<T>()
+#define VALUE(K, T) \
+  if (a[#K]) o.K = a[#K].as<T>()
   VALUE(lcp, std::string);
   VALUE(xnyzip, std::string);
   VALUE(position_scale, std::string);
@@ -97,7 +94,7 @@ void load_config(Options &o) {
   o.lcp = absolute_path(o.lcp, path.parent_path());
   o.xnyzip = absolute_path(o.xnyzip, path.parent_path());
 }
-} // namespace
+}  // namespace
 Options parse_cli(int argc, char **argv) {
   Options o;
   o.config = PARTICLE_DEFAULT_CONFIG;
@@ -128,14 +125,12 @@ Options parse_cli(int argc, char **argv) {
         ->check(CLI::NonNegativeNumber);
     sub->add_flag("--force", o.force);
     sub->add_flag("--clean-raw", o.clean_raw);
-    if (std::string(name) == "decompress")
-      continue;
+    if (std::string(name) == "decompress") continue;
     sub->add_option("input_h5", o.input)->required();
     sub->add_option("--file-workers", o.file_workers)
         ->check(CLI::NonNegativeNumber);
     sub->add_flag("--merge", o.merge);
-    if (std::string(name) == "roundtrip")
-      sub->add_flag("--metrics", o.metrics);
+    if (std::string(name) == "roundtrip") sub->add_flag("--metrics", o.metrics);
 #define OPT(K, N) sub->add_option(N, o.K)
     OPT(abs_eb, "--abs-eb");
     OPT(rel_eb, "--rel-eb");
@@ -170,19 +165,16 @@ Options parse_cli(int argc, char **argv) {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
     int code = app.exit(e);
-    if (code == 0)
-      throw code;
+    if (code == 0) throw code;
     throw std::runtime_error("Invalid command line");
   }
   o.work_dir = absolute_path(o.work_dir);
-  if (!o.input.empty())
-    o.input = absolute_path(o.input);
+  if (!o.input.empty()) o.input = absolute_path(o.input);
   validate(o);
   return o;
 }
 void validate(const Options &o) {
-  if (o.command == "decompress")
-    return;
+  if (o.command == "decompress") return;
   if (o.lattice_layout && o.xnyzip_structure_aware)
     throw std::runtime_error(
         "--xnyzip-structure-aware cannot be combined with --lattice-layout");
@@ -218,4 +210,4 @@ void validate(const Options &o) {
   if (o.merge && !fs::is_directory(o.input))
     throw std::runtime_error("--merge requires input_h5 to be a directory.");
 }
-} // namespace particle
+}  // namespace particle

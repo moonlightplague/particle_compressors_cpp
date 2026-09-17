@@ -1,5 +1,6 @@
-#include "particle/pipeline.hpp"
 #include <iostream>
+
+#include "particle/pipeline.hpp"
 int main(int argc, char **argv) {
   H5::Exception::dontPrint();
   try {

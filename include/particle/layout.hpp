@@ -37,4 +37,4 @@ Array decode_shaped(const std::vector<uint8_t> &bytes, const Json &field);
 std::vector<uint8_t> encode_dimensions(const Array &a, const std::string &codec,
                                        double bound,
                                        const std::array<size_t, 3> &shape);
-} // namespace particle
+}  // namespace particle

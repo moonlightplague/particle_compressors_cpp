@@ -1,10 +1,11 @@
-#include "cpcodec.h"
-#include "particle/pipeline.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
+
+#include "cpcodec.h"
+#include "particle/pipeline.hpp"
 extern "C" {
 unsigned char *particle_szo_lorenzo(int, void *, size_t, double, size_t *);
 unsigned char *particle_sz3_compress(int, void *, size_t *, int, double, double,
@@ -26,8 +27,7 @@ std::vector<uint8_t> encode(const Array &a, const std::string &codec,
 
   if (codec == "pcodec") {
     size_t capacity = pco_standalone_guarantee_file_size(a.size(), a.type.pco);
-    if (!capacity)
-      throw std::runtime_error("pcodec rejected dtype or size");
+    if (!capacity) throw std::runtime_error("pcodec rejected dtype or size");
     std::vector<uint8_t> output(capacity);
     size_t written = 0;
     PcoChunkConfig config{level, 0};
@@ -43,8 +43,7 @@ std::vector<uint8_t> encode(const Array &a, const std::string &codec,
   if (codec != "sz3" && codec != "pysz" && codec != "szo" &&
       codec != "szo_lorenzo")
     throw std::runtime_error("Unsupported field codec: " + codec);
-  if (!a.size())
-    throw std::runtime_error("Empty lossy field");
+  if (!a.size()) throw std::runtime_error("Empty lossy field");
   if (!a.type.floating)
     throw std::runtime_error("Lossy codecs require floating-point fields");
   Array padded = a;
@@ -59,8 +58,7 @@ std::vector<uint8_t> encode(const Array &a, const std::string &codec,
         particle_szo_lorenzo(a.type.bytes == 4 ? 0 : 1, padded.bytes.data(),
                              encoded_count, bound, &n),
         std::free);
-    if (!p)
-      throw std::runtime_error("SZO compression failed");
+    if (!p) throw std::runtime_error("SZO compression failed");
     return {p.get(), p.get() + n};
   }
   auto fn = codec == "szo" ? particle_szo_compress : particle_sz3_compress;
@@ -68,16 +66,14 @@ std::vector<uint8_t> encode(const Array &a, const std::string &codec,
       fn(a.type.bytes == 4 ? 0 : 1, padded.bytes.data(), &n, 0, bound, 0, 0, 0,
          0, 0, 0, encoded_count),
       std::free);
-  if (!p)
-    throw std::runtime_error(codec + " compression failed");
+  if (!p) throw std::runtime_error(codec + " compression failed");
   return {p.get(), p.get() + n};
 }
 Array decode(const std::vector<uint8_t> &payload, const Type &type,
              size_t count, size_t encoded_count, const std::string &codec) {
   if (encoded_count < count)
     throw std::runtime_error("Encoded count is smaller than selected count");
-  if (payload.empty())
-    throw std::runtime_error("Empty compressed stream");
+  if (payload.empty()) throw std::runtime_error("Empty compressed stream");
   Array out{type, std::vector<uint8_t>(checked_bytes(count, type.bytes))};
   if (codec == "pcodec") {
     size_t written = 0;
@@ -100,12 +96,11 @@ Array decode(const std::vector<uint8_t> &payload, const Type &type,
       fn(type.bytes == 4 ? 0 : 1, const_cast<unsigned char *>(payload.data()),
          payload.size(), 0, 0, 0, 0, encoded_count),
       std::free);
-  if (!p)
-    throw std::runtime_error(codec + " decompression failed");
+  if (!p) throw std::runtime_error(codec + " decompression failed");
   std::memcpy(out.bytes.data(), p.get(), out.bytes.size());
   return out;
 }
-} // namespace particle
+}  // namespace particle
 namespace particle {
 std::vector<uint8_t> encode_dimensions(const Array &a, const std::string &codec,
                                        double bound,
@@ -120,8 +115,7 @@ std::vector<uint8_t> encode_dimensions(const Array &a, const std::string &codec,
       fn(a.type.bytes == 4 ? 0 : 1, const_cast<uint8_t *>(a.bytes.data()), &n,
          0, bound, 0, 0, 0, 0, shape[0], shape[1], shape[2]),
       std::free);
-  if (!p)
-    throw std::runtime_error("Shaped compression failed");
+  if (!p) throw std::runtime_error("Shaped compression failed");
   return {p.get(), p.get() + n};
 }
-} // namespace particle
+}  // namespace particle

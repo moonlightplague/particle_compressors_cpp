@@ -1,9 +1,10 @@
-#include "particle/pipeline.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <map>
 #include <stdexcept>
+
+#include "particle/pipeline.hpp"
 namespace particle {
 namespace {
 bool boolean_type(const H5::DataType &type) {
@@ -12,8 +13,7 @@ bool boolean_type(const H5::DataType &type) {
     return false;
   for (unsigned i = 0; i < 2; ++i) {
     char *raw = H5Tget_member_name(type.getId(), i);
-    if (!raw)
-      return false;
+    if (!raw) return false;
     std::string name(raw);
     H5free_memory(raw);
     uint8_t value = 0;
@@ -46,8 +46,7 @@ H5::DataType storage_type(const std::string &name) {
 }
 Json shaped(const Json &flat, const std::vector<hsize_t> &dims, size_t depth,
             size_t &offset) {
-  if (depth == dims.size())
-    return flat.at(offset++);
+  if (depth == dims.size()) return flat.at(offset++);
   Json a = Json::array();
   for (hsize_t i = 0; i < dims[depth]; ++i)
     a.push_back(shaped(flat, dims, depth + 1, offset));
@@ -55,16 +54,14 @@ Json shaped(const Json &flat, const std::vector<hsize_t> &dims, size_t depth,
 }
 void flatten(const Json &j, Json &a) {
   if (j.is_array())
-    for (const auto &v : j)
-      flatten(v, a);
+    for (const auto &v : j) flatten(v, a);
   else
     a.push_back(j);
 }
 std::vector<hsize_t> dimensions(const H5::DataSpace &s) {
   int rank = s.getSimpleExtentNdims();
   std::vector<hsize_t> d(rank);
-  if (rank)
-    s.getSimpleExtentDims(d.data());
+  if (rank) s.getSimpleExtentDims(d.data());
   return d;
 }
 void visit(const H5::Group &g, const std::string &prefix,
@@ -89,7 +86,7 @@ void visit(const H5::Group &g, const std::string &prefix,
     }
   }
 }
-} // namespace
+}  // namespace
 Json attributes(const H5::H5Object &obj) {
   Json result = Json::object();
   for (int i = 0; i < obj.getNumAttrs(); ++i) {
@@ -107,8 +104,7 @@ Json attributes(const H5::H5Object &obj) {
       if (st.isVariableStr()) {
         std::vector<char *> values(n, nullptr);
         a.read(st, values.data());
-        for (auto p : values)
-          flat.push_back(p ? p : "");
+        for (auto p : values) flat.push_back(p ? p : "");
         H5Treclaim(st.getId(), space.getId(), H5P_DEFAULT, values.data());
       } else {
         std::vector<char> b(checked_bytes(n, st.getSize()));
@@ -122,8 +118,7 @@ Json attributes(const H5::H5Object &obj) {
       std::vector<uint8_t> values(n);
       a.read(dt, values.data());
       dtype = "bool";
-      for (auto value : values)
-        flat.push_back(value != 0);
+      for (auto value : values) flat.push_back(value != 0);
     } else {
       auto t = type_of(dt);
       dtype = storage_name(dt);
@@ -165,11 +160,9 @@ void apply_attributes(H5::H5Object &obj, const Json &attrs) {
       auto a = obj.createAttribute(it.key(), t, space);
       if (variable) {
         std::vector<std::string> strings;
-        for (auto &x : flat)
-          strings.push_back(x.get<std::string>());
+        for (auto &x : flat) strings.push_back(x.get<std::string>());
         std::vector<const char *> ptrs;
-        for (auto &s : strings)
-          ptrs.push_back(s.c_str());
+        for (auto &s : strings) ptrs.push_back(s.c_str());
         a.write(t, ptrs.data());
       } else {
         std::vector<char> b(checked_bytes(flat.size(), width), 0);
@@ -187,8 +180,7 @@ void apply_attributes(H5::H5Object &obj, const Json &attrs) {
       type.insert("FALSE", &no);
       type.insert("TRUE", &yes);
       std::vector<int8_t> values;
-      for (const auto &value : flat)
-        values.push_back(value.get<bool>());
+      for (const auto &value : flat) values.push_back(value.get<bool>());
       auto attribute = obj.createAttribute(it.key(), type, space);
       attribute.write(type, values.data());
     } else {
@@ -208,8 +200,7 @@ void apply_attributes(H5::H5Object &obj, const Json &attrs) {
   }
 }
 Snapshot read_hdf5(const fs::path &path, int64_t limit) {
-  if (H5Fis_hdf5(path.c_str()) <= 0)
-    return read_native(path, limit);
+  if (H5Fis_hdf5(path.c_str()) <= 0) return read_native(path, limit);
   H5::H5File file(path.string(), H5F_ACC_RDONLY);
   std::map<std::string, std::string> available;
   visit(file.openGroup("/"), "", available);
@@ -287,9 +278,8 @@ void write_hdf5(const fs::path &path, const Snapshot &s, bool force) {
         file.createGroup(group);
     }
     auto ds = file.createDataSet(name, storage_type(f.at("dtype")), space);
-    if (n)
-      ds.write(s.data[i].bytes.data(), s.data[i].type.h5());
+    if (n) ds.write(s.data[i].bytes.data(), s.data[i].type.h5());
     apply_attributes(ds, f.value("attrs", Json::object()));
   }
 }
-} // namespace particle
+}  // namespace particle

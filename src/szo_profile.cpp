@@ -19,8 +19,7 @@ extern "C" unsigned char *particle_szo_lorenzo(int dtype, void *data,
           : SZ_compress<double>(config, static_cast<double *>(data), *size);
   std::unique_ptr<char[]> owner(encoded);
   auto *output = static_cast<unsigned char *>(std::malloc(*size));
-  if (!output)
-    return nullptr;
+  if (!output) return nullptr;
   std::memcpy(output, encoded, *size);
   return output;
 }

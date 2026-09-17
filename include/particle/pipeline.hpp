@@ -1,12 +1,14 @@
 #pragma once
-#include "json.hpp"
 #include <H5Cpp.h>
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "json.hpp"
 namespace particle {
 using Json = nlohmann::ordered_json;
 namespace fs = std::filesystem;
@@ -80,4 +82,4 @@ void compress(const Options &o, Json &manifest);
 void decompress(const Options &o, Json &manifest);
 void update_sizes(Json &manifest, const fs::path &work);
 int run(const Options &o);
-} // namespace particle
+}  // namespace particle

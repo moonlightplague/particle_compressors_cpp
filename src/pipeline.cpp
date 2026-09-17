@@ -1,8 +1,5 @@
 #include "particle/pipeline.hpp"
-#include "particle/huffman.hpp"
-#include "particle/layout.hpp"
-#include "particle/runtime.hpp"
-#include "particle/triplets.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -10,6 +7,11 @@
 #include <limits>
 #include <numeric>
 #include <stdexcept>
+
+#include "particle/huffman.hpp"
+#include "particle/layout.hpp"
+#include "particle/runtime.hpp"
+#include "particle/triplets.hpp"
 namespace particle {
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -33,8 +35,7 @@ Json selection(const Options &o, bool position, double range) {
                  {"range", range},
                  {"range_units", position ? "lcp_units" : "source_units"},
                  {"compressor_abs", 0.0}};
-  if (codec == "pcodec")
-    return result;
+  if (codec == "pcodec") return result;
   auto absolute = position ? o.pos_abs_eb : o.vel_abs_eb;
   auto relative = position ? o.pos_rel_eb : o.vel_rel_eb;
   if (absolute && relative)
@@ -61,15 +62,14 @@ Json selection(const Options &o, bool position, double range) {
   return result;
 }
 
-} // namespace
+}  // namespace
 Json preprocess(const Options &o) {
   validate(o);
   auto started = Clock::now();
   fs::path work = o.work_dir;
   auto source = read_hdf5(o.input, o.limit);
   size_t count = source.count();
-  if (!count)
-    throw std::runtime_error("Not a valid input array.");
+  if (!count) throw std::runtime_error("Not a valid input array.");
   fs::create_directories(work);
   require_output(work / "manifest.json", o.force);
   double scale = 1;
@@ -87,8 +87,7 @@ Json preprocess(const Options &o) {
     if (!attrs.contains(o.position_scale_attr))
       throw std::runtime_error("Position scale attribute missing");
     auto v = attrs[o.position_scale_attr]["value"];
-    while (v.is_array() && v.size() == 1)
-      v = v[0];
+    while (v.is_array() && v.size() == 1) v = v[0];
     scale = v.get<double>();
     attr = o.position_scale_attr;
     if (o.position_scale == "auto") {
@@ -300,8 +299,7 @@ Json preprocess(const Options &o) {
     auto codec = position ? o.pos_compressor : o.vel_compressor;
     if (codec == "lcp" || codec == "xnyzip") {
       size_t first = position ? 1 : 4;
-      for (size_t i = first; i < first + 3; ++i)
-        compressed.erase(fields[i]);
+      for (size_t i = first; i < first + 3; ++i) compressed.erase(fields[i]);
       compressed[position ? "positions" : "velocities"] =
           (work / "compressed" /
            ((position ? std::string("positions.")
@@ -318,8 +316,7 @@ Json preprocess(const Options &o) {
   m["sizes"] = {{"selected_original_payload_bytes", payload}};
   m["artifacts"] = {{"preprocessed", raw}, {"compressed", compressed}};
   // Validate every output before replacing an existing package.
-  for (auto &p : raw)
-    require_output(p.get<std::string>(), o.force);
+  for (auto &p : raw) require_output(p.get<std::string>(), o.force);
   if (o.force && fs::exists(work / "compressed"))
     fs::remove_all(work / "compressed");
   fs::create_directories(work / "compressed");
@@ -338,8 +335,7 @@ void update_sizes(Json &m, const fs::path &work) {
   components["manifest.json"] = 0;
   for (int i = 0; i < 10; ++i) {
     size_t total = 0;
-    for (auto &v : components)
-      total += v.get<size_t>();
+    for (auto &v : components) total += v.get<size_t>();
     auto &s = m["sizes"];
     s["compressed_components_bytes"] = components;
     s["compressed_total_bytes"] = total;
@@ -351,8 +347,7 @@ void update_sizes(Json &m, const fs::path &work) {
       s["h5_file_to_compressed_ratio"] =
           total ? double(m["input_h5_file_bytes"].get<size_t>()) / total : 0;
     size_t size = json_text(m).size();
-    if (components["manifest.json"] == size)
-      break;
+    if (components["manifest.json"] == size) break;
     components["manifest.json"] = size;
   }
 }
@@ -438,8 +433,7 @@ void compress(const Options &o, Json &m) {
     mapping = "id_sorted";
   }
   if (!order.empty())
-    for (auto &a : data)
-      a = a.gather(order);
+    for (auto &a : data) a = a.gather(order);
   m["timing"]["canonical_order_wall_seconds"] = elapsed(canonical_started);
   auto lattice_started = Clock::now();
   if (o.lattice_layout) {
@@ -452,8 +446,9 @@ void compress(const Options &o, Json &m) {
                                                : "positions_and_velocities"}};
     try {
       if (!lattice_possible)
-        throw std::runtime_error("Lattice layout requires fieldwise SZ3/SZO "
-                                 "velocities and compatible positions");
+        throw std::runtime_error(
+            "Lattice layout requires fieldwise SZ3/SZO "
+            "velocities and compatible positions");
       if (!m["root_attrs"].contains("nsidemesh"))
         throw std::runtime_error("Root attribute nsidemesh is unavailable");
       lattice =
@@ -467,8 +462,7 @@ void compress(const Options &o, Json &m) {
   }
   if (!structured.is_null()) {
     hybrid = hybrid_order(data[0], canonical_positions, structured);
-    for (size_t i = 4; i < 7; ++i)
-      data[i] = data[i].gather(hybrid);
+    for (size_t i = 4; i < 7; ++i) data[i] = data[i].gather(hybrid);
   }
 
   m["timing"]["lattice_prepare_wall_seconds"] = elapsed(lattice_started);
@@ -494,8 +488,7 @@ void compress(const Options &o, Json &m) {
                 (key + "." + dtype.name + ".raw");
     Array indices{dtype,
                   std::vector<uint8_t>(checked_bytes(count, dtype.bytes))};
-    for (size_t i = 0; i < count; ++i)
-      indices.set(i, order[i]);
+    for (size_t i = 0; i < count; ++i) indices.set(i, order[i]);
     write_bytes(path, indices.bytes, o.force);
     m["artifacts"]["preprocessed"][key] = path.string();
     m["ordering"]["reconstructed_rows"]["temporary_permutation_artifact"] = key;
@@ -628,8 +621,7 @@ void compress(const Options &o, Json &m) {
       auto type = type_of(o.vel_compressor == "lcp" ? "int32" : "uint64");
       Array indices{type,
                     std::vector<uint8_t>(checked_bytes(count, type.bytes))};
-      for (size_t i = 0; i < count; ++i)
-        indices.set(i, c.order.at(i));
+      for (size_t i = 0; i < count; ++i) indices.set(i, c.order.at(i));
       save_field("velocity_order", indices, "pcodec", 0);
       m["compressed_fields"]["velocity_order"]["chunk_size"] = o.vel_chunk_size;
     }
@@ -686,12 +678,9 @@ void compress(const Options &o, Json &m) {
       : (o.pos_compressor == "xnyzip" || o.vel_compressor == "xnyzip") ? 5
       : o.vel_chunk_size                                               ? 4
                                                                        : 3;
-  if (o.blockwise_ord)
-    m["format_version"] = 7;
-  if (lattice)
-    m["format_version"] = 8;
-  if (!structured.is_null())
-    m["format_version"] = 9;
+  if (o.blockwise_ord) m["format_version"] = 7;
+  if (lattice) m["format_version"] = 8;
+  if (!structured.is_null()) m["format_version"] = 9;
   size_t chunks = o.vel_chunk_size ? count / o.vel_chunk_size +
                                          (count % o.vel_chunk_size != 0)
                                    : 1;
@@ -767,8 +756,7 @@ void decompress(const Options &o, Json &m) {
   decoded[0] = load_field(m["compressed_fields"].at("id"));
   std::vector<size_t> field_jobs;
   for (size_t i = 1; i < 7; ++i)
-    if (m["compressed_fields"].contains(fields[i]))
-      field_jobs.push_back(i);
+    if (m["compressed_fields"].contains(fields[i])) field_jobs.push_back(i);
   auto field_started = Clock::now();
   m["runtime"]["decompression_field_workers"] =
       worker_count(o.field_workers, field_jobs.size());
@@ -803,11 +791,9 @@ void decompress(const Options &o, Json &m) {
     }
   }
   auto restore = [&](size_t first, const std::string &key) {
-    if (!m["compressed_fields"].contains(key))
-      return;
+    if (!m["compressed_fields"].contains(key)) return;
     auto f = m["compressed_fields"][key];
-    if (f.value("applied_during_lcp_decompression", false))
-      return;
+    if (f.value("applied_during_lcp_decompression", false)) return;
     auto indices = load_field(f);
     size_t chunk = f.value("chunk_size", size_t(0));
     std::vector<size_t> inverse(count);
@@ -819,8 +805,7 @@ void decompress(const Options &o, Json &m) {
       if (value < 0 || value >= local_count)
         throw std::runtime_error("Invalid order index");
       size_t target = base + static_cast<size_t>(value);
-      if (seen[target])
-        throw std::runtime_error("Duplicate order index");
+      if (seen[target]) throw std::runtime_error("Duplicate order index");
       seen[target] = true;
       inverse[target] = i;
     }
@@ -841,10 +826,8 @@ void decompress(const Options &o, Json &m) {
     auto order =
         hybrid_order(decoded[0], {decoded[1], decoded[2], decoded[3]}, layout);
     std::vector<size_t> inverse(count);
-    for (size_t i = 0; i < count; ++i)
-      inverse[order[i]] = i;
-    for (size_t i = 4; i < 7; ++i)
-      decoded[i] = decoded[i].gather(inverse);
+    for (size_t i = 0; i < count; ++i) inverse[order[i]] = i;
+    for (size_t i = 4; i < 7; ++i) decoded[i] = decoded[i].gather(inverse);
   }
 
   for (size_t i = 0; i < 7; ++i) {
@@ -893,8 +876,7 @@ void decompress(const Options &o, Json &m) {
 }
 int run(const Options &o) {
   auto start = Clock::now();
-  if (!o.input.empty() && fs::is_directory(o.input))
-    return run_directory(o);
+  if (!o.input.empty() && fs::is_directory(o.input)) return run_directory(o);
   auto work = fs::path(o.work_dir);
   Json m;
   if (o.command == "decompress")
@@ -906,8 +888,7 @@ int run(const Options &o) {
     }
     m = preprocess(o);
   }
-  if (o.command == "compress" || o.command == "roundtrip")
-    compress(o, m);
+  if (o.command == "compress" || o.command == "roundtrip") compress(o, m);
   if (o.command == "decompress" || o.command == "roundtrip") {
     decompress(o, m);
     if (o.metrics) {
@@ -934,4 +915,4 @@ int run(const Options &o) {
               << '\n';
   return 0;
 }
-} // namespace particle
+}  // namespace particle
