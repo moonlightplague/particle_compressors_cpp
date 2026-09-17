@@ -1,0 +1,35 @@
+advanced:
+  # Relative paths are resolved from this config file's directory.
+  lcp: ./tools/LCP/build/bin/lcp
+  xnyzip: ./tools/XnYZip/build/XnYZip
+
+  # Optional field-specific bounds override --abs-eb/--rel-eb when set.
+  abs_eb: null
+  rel_eb: 1e-3
+  pos_abs_eb: null
+  pos_rel_eb: null
+  vel_abs_eb: null
+  vel_rel_eb: null
+  # 0 disables velocity chunking. Positive values support LCP velocities with
+  # LCP positions, or XnYZip velocities with LCP/XnYZip positions.
+  vel_chunk_size: 0
+  # 0 selects up to 16 workers automatically for chunked velocities.
+  vel_chunk_workers: 0
+  id_abs_eb: 0.0
+  pos_compressor: szo
+  vel_compressor: szo
+  lossless: pcodec
+  # Opt-in periodic ID-lattice layout. Existing codec pipelines remain the
+  # default unless this is enabled here or with --lattice-layout.
+  lattice_layout: false
+  lattice_min_occupancy: 0.69
+  lattice_axis_search: true
+  # Opt-in mesh-ID + hybrid velocity layout: XnYZip positions, SZO/XnYZip velocities.
+  # Existing methods and their defaults are unchanged.
+  xnyzip_structure_aware: false
+  xnyzip_velocity_cell_bits: 7
+
+  # Integer position conversion used before float32 triplet compression.
+  position_scale: auto
+  position_scale_attr: bitwidth
+  position_scale_value: null

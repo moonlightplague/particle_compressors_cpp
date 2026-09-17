@@ -4,3 +4,6 @@ particle_pipeline_runs/
 analysis
 .codex/
 *build/
+.deps/
+build*/
+__pycache__/
